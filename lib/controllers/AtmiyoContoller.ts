@@ -7,9 +7,9 @@ import {Readable} from "stream";
 
 export default class AtmiyoContoller {
     public AtmiyoGet(req: Request, res: Response) {
-        const database = new DB()
+        const database = new DB();
         database.ConnectToServer().then(mainDb => {
-            let fileID
+            let fileID;
             try {
                 fileID = new ObjectId(req.params.fileID)
             } catch (e) {
@@ -19,14 +19,15 @@ export default class AtmiyoContoller {
             res.set('accept-ranges', 'bytes');
             let bucket = new GridFSBucket(mainDb, {
                 bucketName: 'atmiyobasket'
-            })
-            let downloadStream = bucket.openDownloadStream(fileID)
+            });
+            let downloadStream = bucket.openDownloadStream(fileID);
             downloadStream.pipe(res, {end: true})
         })
     }
     public AtmiyoPost(req: Request, res: Response) {
         const database = new DB();
         database.ConnectToServer().then(mainDb => {
+            console.log(mainDb);
             const storage = multer.memoryStorage();
             const upload = multer();
             upload.single('atmiyo')(req, res, async (err) => {
@@ -42,14 +43,16 @@ export default class AtmiyoContoller {
                 readableStream.push(null);
                 let bucket = new GridFSBucket(mainDb, {
                     bucketName: 'atmiyobasket'
-                })
+                });
                 let uploadStream = bucket.openUploadStream(fileName);
                 let id = uploadStream.id;
                 readableStream.pipe(uploadStream);
-                uploadStream.on('error', () => {
+                await uploadStream.on('error', (error) => {
+                    console.log(error);
                     return res.status(500).json({messsage:"Error uploading file"})
-                })
-                uploadStream.on('finish', () => {
+                });
+                await uploadStream.on('finish', () => {
+                    console.log(uploadStream);
                     return res.status(201).json({
                         message: "File uploaded successfully, stored under Mongo ObjectID: " + id,
                         fileid: {
